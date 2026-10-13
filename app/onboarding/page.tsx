@@ -61,7 +61,7 @@ export default function OnboardingPage() {
             className={`h-1 flex-1 rounded-full transition-colors ${
               ['profile', 'interests', 'quiz'].indexOf(step) >= i
                 ? 'bg-spark-500'
-                : 'bg-neutral-800'
+                : 'bg-surface-raised'
             }`}
           />
         ))}

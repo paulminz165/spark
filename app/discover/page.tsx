@@ -115,37 +115,46 @@ export default function DiscoverPage() {
     setSwiping(true);
     setSwipeDirection(direction === 'like' ? 'right' : 'left');
 
-    await supabase.from('swipes').insert({
-      swiper_id: userId,
-      swiped_id: currentProfile.id,
-      direction,
-    });
+    // Wait for card exit animation
+    await new Promise((r) => setTimeout(r, 300));
 
-    if (direction === 'like') {
-      const { data: mutualCheck } = await supabase
-        .from('swipes')
-        .select('id')
-        .eq('swiper_id', currentProfile.id)
-        .eq('swiped_id', userId)
-        .eq('direction', 'like')
-        .maybeSingle();
+    try {
+      await supabase.from('swipes').insert({
+        swiper_id: userId,
+        swiped_id: currentProfile.id,
+        direction,
+      });
 
-      if (mutualCheck) {
-        setMatchedName(currentProfile.name);
-        setTimeout(() => setShowMatch(true), 350);
+      if (direction === 'like') {
+        const { data: mutualCheck } = await supabase
+          .from('swipes')
+          .select('id')
+          .eq('swiper_id', currentProfile.id)
+          .eq('swiped_id', userId)
+          .eq('direction', 'like')
+          .maybeSingle();
+
+        if (mutualCheck) {
+          setMatchedName(currentProfile.name);
+          setSwipeDirection(null);
+          setDragX(0);
+          setSwiping(false);
+          setShowMatch(true);
+          return; // Don't advance card — celebration is showing
+        }
       }
+    } catch (err) {
+      console.error('Swipe error:', err);
     }
 
-    setTimeout(() => {
-      setSwipeDirection(null);
-      setDragX(0);
-      if (currentIndex < profiles.length - 1) {
-        setCurrentIndex((i) => i + 1);
-      } else {
-        setCurrentIndex(profiles.length);
-      }
-      setSwiping(false);
-    }, 300);
+    setSwipeDirection(null);
+    setDragX(0);
+    if (currentIndex < profiles.length - 1) {
+      setCurrentIndex((i) => i + 1);
+    } else {
+      setCurrentIndex(profiles.length);
+    }
+    setSwiping(false);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -205,8 +214,8 @@ export default function DiscoverPage() {
             </span>
           </div>
         </div>
-        <p className="text-sm text-neutral-500">
-          Swipe right if you're interested, left to pass
+        <p className="text-sm text-neutral-400">
+          Swipe right if you&apos;re interested, left to pass
         </p>
       </div>
 
@@ -237,7 +246,7 @@ export default function DiscoverPage() {
               </div>
             )}
 
-            <div className="bg-surface-raised border border-neutral-800 rounded-2xl overflow-hidden">
+            <div className="bg-surface-raised border border-[#2A2A3E] rounded-2xl overflow-hidden">
               <div className="bg-gradient-to-br from-spark-500/20 to-spark-700/20 h-32 flex items-center justify-center">
                 <div className="text-center">
                   <p className="text-4xl font-serif font-bold text-spark-400">
@@ -251,25 +260,25 @@ export default function DiscoverPage() {
                 <div className="mb-3">
                   <h3 className="font-semibold text-xl">
                     {currentProfile.name}
-                    {age && <span className="text-neutral-500 font-normal">, {age}</span>}
+                    {age && <span className="text-neutral-400 font-normal">, {age}</span>}
                   </h3>
-                  <p className="text-sm text-neutral-500">
+                  <p className="text-sm text-neutral-400">
                     {[currentProfile.program, currentProfile.department].filter(Boolean).join(' · ') || 'IIT Delhi'}
                   </p>
                 </div>
 
                 {currentProfile.bio && (
-                  <p className="text-sm text-neutral-300 mb-4">"{currentProfile.bio}"</p>
+                  <p className="text-sm text-neutral-300 mb-4">&quot;{currentProfile.bio}&quot;</p>
                 )}
 
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {currentProfile.relationship_goal && (
-                    <span className="text-xs bg-neutral-800 text-neutral-300 px-2.5 py-1 rounded-full">
+                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
                       {currentProfile.relationship_goal}
                     </span>
                   )}
                   {currentProfile.diet && (
-                    <span className="text-xs bg-neutral-800 text-neutral-300 px-2.5 py-1 rounded-full">
+                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
                       {currentProfile.diet}
                     </span>
                   )}
@@ -277,7 +286,7 @@ export default function DiscoverPage() {
 
                 {currentProfile.shared_interests?.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-xs text-neutral-500 mb-2">Shared interests</p>
+                    <p className="text-xs text-neutral-400 mb-2">Shared interests</p>
                     <div className="flex flex-wrap gap-1.5">
                       {currentProfile.shared_interests.map((interest) => (
                         <span key={interest} className="text-xs bg-spark-500/10 text-spark-400 px-2.5 py-1 rounded-full">
@@ -296,11 +305,11 @@ export default function DiscoverPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center mb-4">
               <Flame className="w-8 h-8 text-neutral-600" />
             </div>
-            <h2 className="font-serif text-xl mb-2">You've seen everyone</h2>
-            <p className="text-sm text-neutral-500 max-w-xs">
+            <h2 className="font-serif text-xl mb-2">You&apos;ve seen everyone</h2>
+            <p className="text-sm text-neutral-400 max-w-xs">
               Check back later as more people join Spark. Meanwhile, check your matches!
             </p>
             <button
@@ -333,14 +342,14 @@ export default function DiscoverPage() {
       )}
 
       {showMatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F0F1A]/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="text-6xl mb-4 animate-bounce">🎉</div>
-            <h2 className="font-serif text-4xl italic text-spark-400 mb-2">It's a Match!</h2>
+            <h2 className="font-serif text-4xl italic text-spark-400 mb-2">It&apos;s a Match!</h2>
             <p className="text-neutral-400 mb-2">
               You and <span className="text-white font-semibold">{matchedName}</span> liked each other
             </p>
-            <p className="text-sm text-neutral-500 mb-8">Start a conversation now!</p>
+            <p className="text-sm text-neutral-400 mb-8">Start a conversation now!</p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => router.push('/chat')}
@@ -349,8 +358,15 @@ export default function DiscoverPage() {
                 Say Hi 👋
               </button>
               <button
-                onClick={() => setShowMatch(false)}
-                className="border border-neutral-700 text-neutral-300 font-semibold py-3 px-8 rounded-xl hover:bg-neutral-800 transition-colors"
+                onClick={() => {
+                  setShowMatch(false);
+                  if (currentIndex < profiles.length - 1) {
+                    setCurrentIndex((i) => i + 1);
+                  } else {
+                    setCurrentIndex(profiles.length);
+                  }
+                }}
+                className="border border-neutral-700 text-neutral-300 font-semibold py-3 px-8 rounded-xl hover:bg-surface-raised transition-colors"
               >
                 Keep Swiping
               </button>

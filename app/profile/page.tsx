@@ -114,7 +114,7 @@ export default function ProfilePage() {
           </div>
           <div>
             <h2 className="text-xl font-semibold">{profile.name}</h2>
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-neutral-400">
               {age && `${age} · `}
               {profile.gender}
             </p>
@@ -150,13 +150,13 @@ export default function ProfilePage() {
               <div key={label} className="flex items-center gap-3">
                 <span className="text-sm w-6">{emoji}</span>
                 <span className="text-xs text-neutral-400 w-28">{label}</span>
-                <div className="flex-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                <div className="flex-1 h-1.5 bg-surface-raised rounded-full overflow-hidden">
                   <div
                     className="h-full bg-spark-500 rounded-full"
                     style={{ width: `${(value / 5) * 100}%` }}
                   />
                 </div>
-                <span className="text-xs text-neutral-500 w-8 text-right">
+                <span className="text-xs text-neutral-400 w-8 text-right">
                   {value}/5
                 </span>
               </div>
@@ -188,7 +188,7 @@ export default function ProfilePage() {
       <div className="px-6 space-y-1">
         <button className="w-full flex items-center justify-between py-3.5 px-4 bg-surface-raised rounded-xl text-sm text-neutral-300 hover:bg-surface-overlay transition-colors">
           <div className="flex items-center gap-3">
-            <Shield className="w-4 h-4 text-neutral-500" />
+            <Shield className="w-4 h-4 text-neutral-400" />
             <span>Privacy & Dealbreakers</span>
           </div>
           <ChevronRight className="w-4 h-4 text-neutral-600" />

@@ -132,7 +132,7 @@ export default function InterestPicker({ userId, onComplete, onBack }: InterestP
         <span className="text-sm text-neutral-300">
           {selected.size} of {MIN_INTERESTS}–{MAX_INTERESTS} selected
         </span>
-        <div className="h-2 w-24 bg-neutral-800 rounded-full overflow-hidden">
+        <div className="h-2 w-24 bg-surface-raised rounded-full overflow-hidden">
           <div
             className="h-full bg-spark-500 rounded-full transition-all"
             style={{
@@ -145,7 +145,7 @@ export default function InterestPicker({ userId, onComplete, onBack }: InterestP
       {/* Interest chips by category */}
       {Object.entries(grouped).map(([category, items]) => (
         <div key={category}>
-          <h3 className="text-xs uppercase tracking-wider text-neutral-500 mb-2">
+          <h3 className="text-xs uppercase tracking-wider text-neutral-400 mb-2">
             {CATEGORY_EMOJIS[category]} {category}
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -158,7 +158,7 @@ export default function InterestPicker({ userId, onComplete, onBack }: InterestP
                   className={`py-2 px-3.5 rounded-full text-sm border transition-all ${
                     isSelected
                       ? 'border-spark-500 bg-spark-500/15 text-spark-400'
-                      : 'border-neutral-800 bg-surface-raised text-neutral-300 hover:border-neutral-700'
+                      : 'border-[#2A2A3E] bg-surface-raised text-neutral-300 hover:border-neutral-700'
                   }`}
                 >
                   {interest.name}

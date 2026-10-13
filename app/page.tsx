@@ -61,7 +61,7 @@ export default function LandingPage() {
       <p className="text-lg text-neutral-300 mb-2">
         Compatibility over looks.
       </p>
-      <p className="text-sm text-neutral-500 mb-12 max-w-xs">
+      <p className="text-sm text-neutral-400 mb-12 max-w-xs">
         5 matches a week, picked by who you actually are — not what you look like.
       </p>
 

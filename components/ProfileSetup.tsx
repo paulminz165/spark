@@ -101,13 +101,13 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
           Name (as you'd like to appear)
         </label>
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your first name"
-            className="w-full bg-surface-raised border border-neutral-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-spark-500/50"
+            className="w-full bg-surface-raised border border-[#2A2A3E] rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-spark-500/50"
           />
         </div>
       </div>
@@ -118,12 +118,12 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
           Date of birth
         </label>
         <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
           <input
             type="date"
             value={dob}
             onChange={(e) => setDob(e.target.value)}
-            className="w-full bg-surface-raised border border-neutral-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-spark-500/50 [color-scheme:dark]"
+            className="w-full bg-surface-raised border border-[#2A2A3E] rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-spark-500/50 [color-scheme:dark]"
           />
         </div>
       </div>
@@ -139,7 +139,7 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
               className={`py-2.5 px-4 rounded-xl text-sm border transition-colors ${
                 gender === g
                   ? 'border-spark-500 bg-spark-500/10 text-spark-400'
-                  : 'border-neutral-800 bg-surface-raised text-neutral-300 hover:border-neutral-700'
+                  : 'border-[#2A2A3E] bg-surface-raised text-neutral-300 hover:border-neutral-700'
               }`}
             >
               {g}
@@ -168,10 +168,10 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
                 g === 'Everyone'
                   ? prefGender.length === 3
                     ? 'border-spark-500 bg-spark-500/10 text-spark-400'
-                    : 'border-neutral-800 bg-surface-raised text-neutral-300'
+                    : 'border-[#2A2A3E] bg-surface-raised text-neutral-300'
                   : prefGender.includes(g)
                     ? 'border-spark-500 bg-spark-500/10 text-spark-400'
-                    : 'border-neutral-800 bg-surface-raised text-neutral-300'
+                    : 'border-[#2A2A3E] bg-surface-raised text-neutral-300'
               }`}
             >
               {g}
@@ -191,7 +191,7 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
               className={`py-2 px-4 rounded-full text-sm border transition-colors ${
                 diet === d
                   ? 'border-spark-500 bg-spark-500/10 text-spark-400'
-                  : 'border-neutral-800 bg-surface-raised text-neutral-300'
+                  : 'border-[#2A2A3E] bg-surface-raised text-neutral-300'
               }`}
             >
               {d}
@@ -216,7 +216,7 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
               className={`py-2 px-6 rounded-full text-sm border transition-colors ${
                 smoker === value
                   ? 'border-spark-500 bg-spark-500/10 text-spark-400'
-                  : 'border-neutral-800 bg-surface-raised text-neutral-300'
+                  : 'border-[#2A2A3E] bg-surface-raised text-neutral-300'
               }`}
             >
               {label}
@@ -238,7 +238,7 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
               className={`py-2.5 px-4 rounded-xl text-sm border transition-colors ${
                 relationshipGoal === goal
                   ? 'border-spark-500 bg-spark-500/10 text-spark-400'
-                  : 'border-neutral-800 bg-surface-raised text-neutral-300'
+                  : 'border-[#2A2A3E] bg-surface-raised text-neutral-300'
               }`}
             >
               {goal}
@@ -258,7 +258,7 @@ export default function ProfileSetup({ userId,onComplete }: ProfileSetupProps) {
           placeholder="Chai > coffee. Will debate this."
           maxLength={200}
           rows={3}
-          className="w-full bg-surface-raised border border-neutral-800 rounded-xl py-3 px-4 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-spark-500/50 resize-none"
+          className="w-full bg-surface-raised border border-[#2A2A3E] rounded-xl py-3 px-4 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-spark-500/50 resize-none"
         />
         <p className="text-xs text-neutral-600 mt-1">{bio.length}/200</p>
       </div>

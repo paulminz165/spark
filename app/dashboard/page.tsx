@@ -163,28 +163,37 @@ export default function DashboardPage() {
     setSwiping(true);
     setSwipeDirection(direction === 'like' ? 'right' : 'left');
 
-    await supabase.from('swipes').insert({
-      swiper_id: userId,
-      swiped_id: currentProfile.swiperId,
-      direction,
-    });
+    // Wait for card exit animation
+    await new Promise((r) => setTimeout(r, 300));
 
-    // They already liked me, so if I like back → it's a match
-    if (direction === 'like') {
-      setMatchedName(currentProfile.profile.name);
-      setTimeout(() => setShowMatch(true), 350);
+    try {
+      await supabase.from('swipes').insert({
+        swiper_id: userId,
+        swiped_id: currentProfile.swiperId,
+        direction,
+      });
+
+      // They already liked me, so if I like back → it's a match
+      if (direction === 'like') {
+        setMatchedName(currentProfile.profile.name);
+        setSwipeDirection(null);
+        setDragX(0);
+        setSwiping(false);
+        setShowMatch(true);
+        return; // Don't advance card — celebration is showing
+      }
+    } catch (err) {
+      console.error('Swipe error:', err);
     }
 
-    setTimeout(() => {
-      setSwipeDirection(null);
-      setDragX(0);
-      if (currentIndex < likedByProfiles.length - 1) {
-        setCurrentIndex((i) => i + 1);
-      } else {
-        setCurrentIndex(likedByProfiles.length);
-      }
-      setSwiping(false);
-    }, 300);
+    setSwipeDirection(null);
+    setDragX(0);
+    if (currentIndex < likedByProfiles.length - 1) {
+      setCurrentIndex((i) => i + 1);
+    } else {
+      setCurrentIndex(likedByProfiles.length);
+    }
+    setSwiping(false);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -246,7 +255,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        <p className="text-sm text-neutral-500">People who are interested in you</p>
+        <p className="text-sm text-neutral-400">People who are interested in you</p>
       </div>
 
       <div className="px-4 relative" style={{ minHeight: '420px' }}>
@@ -276,10 +285,10 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <div className="bg-surface-raised border border-neutral-800 rounded-2xl overflow-hidden">
-              <div className="bg-gradient-to-br from-pink-500/20 to-spark-700/20 h-32 flex items-center justify-center relative">
-                <div className="absolute top-3 right-3 bg-pink-500/20 border border-pink-500/30 px-2.5 py-1 rounded-full">
-                  <span className="text-xs text-pink-400 font-medium flex items-center gap-1">
+            <div className="bg-surface-raised border border-[#2A2A3E] rounded-2xl overflow-hidden">
+              <div className="bg-gradient-to-br from-peach-400/20 to-spark-700/20 h-32 flex items-center justify-center relative">
+                <div className="absolute top-3 right-3 bg-peach-400/20 border border-peach-400/30 px-2.5 py-1 rounded-full">
+                  <span className="text-xs text-peach-400 font-medium flex items-center gap-1">
                     <Heart className="w-3 h-3 fill-current" /> Liked you
                   </span>
                 </div>
@@ -294,26 +303,26 @@ export default function DashboardPage() {
                 <div className="mb-3">
                   <h3 className="font-semibold text-xl">
                     {currentProfile.profile.name}
-                    {age && <span className="text-neutral-500 font-normal">, {age}</span>}
+                    {age && <span className="text-neutral-400 font-normal">, {age}</span>}
                   </h3>
-                  <p className="text-sm text-neutral-500">
+                  <p className="text-sm text-neutral-400">
                     {[currentProfile.profile.program, currentProfile.profile.department]
                       .filter(Boolean).join(' · ') || 'IIT Delhi'}
                   </p>
                 </div>
 
                 {currentProfile.profile.bio && (
-                  <p className="text-sm text-neutral-300 mb-4">"{currentProfile.profile.bio}"</p>
+                  <p className="text-sm text-neutral-300 mb-4">&quot;{currentProfile.profile.bio}&quot;</p>
                 )}
 
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {currentProfile.profile.relationship_goal && (
-                    <span className="text-xs bg-neutral-800 text-neutral-300 px-2.5 py-1 rounded-full">
+                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
                       {currentProfile.profile.relationship_goal}
                     </span>
                   )}
                   {currentProfile.profile.diet && (
-                    <span className="text-xs bg-neutral-800 text-neutral-300 px-2.5 py-1 rounded-full">
+                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
                       {currentProfile.profile.diet}
                     </span>
                   )}
@@ -321,7 +330,7 @@ export default function DashboardPage() {
 
                 {currentProfile.shared_interests.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-xs text-neutral-500 mb-2">Shared interests</p>
+                    <p className="text-xs text-neutral-400 mb-2">Shared interests</p>
                     <div className="flex flex-wrap gap-1.5">
                       {currentProfile.shared_interests.map((interest) => (
                         <span key={interest} className="text-xs bg-spark-500/10 text-spark-400 px-2.5 py-1 rounded-full">
@@ -340,12 +349,12 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center mb-4">
               <Heart className="w-8 h-8 text-neutral-600" />
             </div>
             <h2 className="font-serif text-xl mb-2">No pending likes</h2>
-            <p className="text-sm text-neutral-500 max-w-xs">
-              When someone likes you, they'll show up here. Keep discovering!
+            <p className="text-sm text-neutral-400 max-w-xs">
+              When someone likes you, they&apos;ll show up here. Keep discovering!
             </p>
             <button
               onClick={() => router.push('/discover')}
@@ -376,16 +385,15 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Match celebration overlay */}
       {showMatch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F0F1A]/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="text-6xl mb-4 animate-bounce">🎉</div>
-            <h2 className="font-serif text-4xl italic text-spark-400 mb-2">It's a Match!</h2>
+            <h2 className="font-serif text-4xl italic text-spark-400 mb-2">It&apos;s a Match!</h2>
             <p className="text-neutral-400 mb-2">
               You and <span className="text-white font-semibold">{matchedName}</span> liked each other
             </p>
-            <p className="text-sm text-neutral-500 mb-8">Start a conversation now!</p>
+            <p className="text-sm text-neutral-400 mb-8">Start a conversation now!</p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => router.push('/chat')}
@@ -394,8 +402,15 @@ export default function DashboardPage() {
                 Say Hi 👋
               </button>
               <button
-                onClick={() => setShowMatch(false)}
-                className="border border-neutral-700 text-neutral-300 font-semibold py-3 px-8 rounded-xl hover:bg-neutral-800 transition-colors"
+                onClick={() => {
+                  setShowMatch(false);
+                  if (currentIndex < likedByProfiles.length - 1) {
+                    setCurrentIndex((i) => i + 1);
+                  } else {
+                    setCurrentIndex(likedByProfiles.length);
+                  }
+                }}
+                className="border border-neutral-700 text-neutral-300 font-semibold py-3 px-8 rounded-xl hover:bg-surface-raised transition-colors"
               >
                 Keep Swiping
               </button>

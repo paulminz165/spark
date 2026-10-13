@@ -140,7 +140,7 @@ export default function QuizScreen({ userId, onComplete, onBack }: QuizScreenPro
       </div>
 
       {/* Progress bar */}
-      <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
         <div
           className="h-full bg-spark-500 rounded-full transition-all duration-500"
           style={{ width: `${progress}%` }}
@@ -172,7 +172,7 @@ export default function QuizScreen({ userId, onComplete, onBack }: QuizScreenPro
                   className={`w-full text-left py-3.5 px-4 rounded-xl border text-sm transition-all ${
                     isSelected
                       ? 'border-spark-500 bg-spark-500/10 text-spark-400'
-                      : 'border-neutral-800 bg-surface-raised text-neutral-300 hover:border-neutral-700'
+                      : 'border-[#2A2A3E] bg-surface-raised text-neutral-300 hover:border-neutral-700'
                   }`}
                 >
                   {opt.label || opt.text}
@@ -188,7 +188,7 @@ export default function QuizScreen({ userId, onComplete, onBack }: QuizScreenPro
         {currentIndex > 0 && (
           <button
             onClick={() => setCurrentIndex((i) => i - 1)}
-            className="flex-1 py-3 rounded-xl border border-neutral-800 text-neutral-300 text-sm hover:border-neutral-700"
+            className="flex-1 py-3 rounded-xl border border-[#2A2A3E] text-neutral-300 text-sm hover:border-neutral-700"
           >
             Previous
           </button>

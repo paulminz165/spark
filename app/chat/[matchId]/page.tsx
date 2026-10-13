@@ -139,7 +139,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-800 bg-surface/90 backdrop-blur-lg">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-[#2A2A3E] bg-surface/90 backdrop-blur-lg">
         <button
           onClick={() => router.push('/chat')}
           className="text-neutral-400 hover:text-neutral-300"
@@ -199,7 +199,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-neutral-800 bg-surface/90 backdrop-blur-lg">
+      <div className="px-4 py-3 border-t border-[#2A2A3E] bg-surface/90 backdrop-blur-lg">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -207,7 +207,7 @@ export default function ChatPage() {
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Type a message..."
-            className="flex-1 bg-surface-raised border border-neutral-800 rounded-full py-2.5 px-4 text-sm focus:outline-none focus:border-spark-500/50"
+            className="flex-1 bg-surface-raised border border-[#2A2A3E] rounded-full py-2.5 px-4 text-sm focus:outline-none focus:border-spark-500/50"
           />
           <button
             onClick={handleSend}

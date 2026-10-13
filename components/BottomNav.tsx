@@ -17,7 +17,7 @@ const NAV_ITEMS = [
 
 export default function BottomNav({ active }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-lg border-t border-neutral-800 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-surface/90 backdrop-blur-lg border-t border-[#2A2A3E] z-50">
       <div className="mx-auto max-w-md flex">
         {NAV_ITEMS.map(({ key, label, icon: Icon, href }) => (
           <Link

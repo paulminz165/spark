@@ -45,7 +45,7 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
         : 'text-yellow-400';
 
   return (
-    <div className="bg-surface-raised border border-neutral-800 rounded-2xl overflow-hidden">
+    <div className="bg-surface-raised border border-[#2A2A3E] rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="p-5">
         <div className="flex items-start justify-between mb-3">
@@ -67,7 +67,7 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
 
             <div>
               <h3 className="font-semibold text-lg">{profile.name}</h3>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-neutral-400">
                 {age && `${age}`}
                 {profile.relationship_goal && ` · ${profile.relationship_goal}`}
               </p>
@@ -79,7 +79,7 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
             <span className={`text-2xl font-bold ${scoreColor}`}>
               {score}
             </span>
-            <span className="text-[10px] uppercase tracking-wider text-neutral-500">
+            <span className="text-[10px] uppercase tracking-wider text-neutral-400">
               match
             </span>
           </div>
@@ -87,7 +87,7 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
 
         {/* Photo lock notice */}
         {!photoUnlocked && (
-          <div className="flex items-center gap-2 bg-neutral-800/50 rounded-lg px-3 py-2 mb-3">
+          <div className="flex items-center gap-2 bg-surface-raised/50 rounded-lg px-3 py-2 mb-3">
             {match.status === 'both_liked' ? (
               <>
                 <Unlock className="w-3.5 h-3.5 text-green-400" />
@@ -97,8 +97,8 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
               </>
             ) : (
               <>
-                <Lock className="w-3.5 h-3.5 text-neutral-500" />
-                <span className="text-xs text-neutral-500">
+                <Lock className="w-3.5 h-3.5 text-neutral-400" />
+                <span className="text-xs text-neutral-400">
                   Photos unlock 24h after you both like the match
                 </span>
               </>
@@ -138,7 +138,7 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
         {/* Expand/collapse breakdown */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-400"
+          className="flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-400"
         >
           {expanded ? (
             <>
@@ -163,13 +163,13 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
               <span className="text-xs text-neutral-400 w-28">
                 {DIMENSION_LABELS[key] || key}
               </span>
-              <div className="flex-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+              <div className="flex-1 h-1.5 bg-surface-raised rounded-full overflow-hidden">
                 <div
                   className="h-full bg-spark-500 rounded-full transition-all duration-700"
                   style={{ width: `${value}%` }}
                 />
               </div>
-              <span className="text-xs text-neutral-500 w-8 text-right">
+              <span className="text-xs text-neutral-400 w-8 text-right">
                 {String(value)}%
               </span>
             </div>
@@ -178,8 +178,8 @@ export default function MatchCard({ match, currentUserId, onChat }: MatchCardPro
       )}
 
       {/* Action buttons */}
-      <div className="flex border-t border-neutral-800">
-        <button className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-400 hover:text-red-400 hover:bg-red-400/5 transition-colors border-r border-neutral-800">
+      <div className="flex border-t border-[#2A2A3E]">
+        <button className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm text-neutral-400 hover:text-red-400 hover:bg-red-400/5 transition-colors border-r border-[#2A2A3E]">
           <Heart className="w-4 h-4" /> Like
         </button>
         <button
