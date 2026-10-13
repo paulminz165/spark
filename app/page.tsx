@@ -53,7 +53,7 @@ export default function LandingPage() {
         <div className="w-20 h-20 rounded-2xl bg-spark-500/20 flex items-center justify-center mb-4 mx-auto">
           <Flame className="w-10 h-10 text-spark-500" />
         </div>
-        <h1 className="font-serif text-5xl italic text-spark-400">Spark</h1>
+        <h1 className="font-serif text-5xl italic text-spark-400">Wynked</h1>
         <p className="text-sm text-neutral-400 mt-2">IIT Delhi</p>
       </div>
 

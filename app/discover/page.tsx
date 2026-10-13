@@ -206,7 +206,7 @@ export default function DiscoverPage() {
     <div className="min-h-screen pb-24">
       <div className="px-6 pt-8 pb-4">
         <div className="flex items-center justify-between mb-1">
-          <h1 className="font-serif text-3xl italic text-spark-400">Discover</h1>
+          <h1 className="font-serif text-3xl italic text-spark-400">Wynked</h1>
           <div className="flex items-center gap-1 bg-spark-500/10 px-3 py-1 rounded-full">
             <Sparkles className="w-3.5 h-3.5 text-spark-400" />
             <span className="text-xs text-spark-400 font-medium">
