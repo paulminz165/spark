@@ -27,6 +27,8 @@ export default function DiscoverPage() {
   const [swiping, setSwiping] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [userId, setUserId] = useState('');
+  const [showMatch, setShowMatch] = useState(false);
+  const [matchedName, setMatchedName] = useState('');
 
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -44,30 +46,26 @@ export default function DiscoverPage() {
         const uid = session.user.id;
         setUserId(uid);
 
-        // Get my preferences
         const { data: myProfile } = await supabase
           .from('profiles')
           .select('pref_gender, pref_age_min, pref_age_max, gender')
           .eq('id', uid)
           .single();
 
-        // Get IDs I already swiped on
         const { data: swipedData } = await supabase
           .from('swipes')
           .select('swiped_id')
           .eq('swiper_id', uid);
 
         const swipedIds = swipedData?.map((s) => s.swiped_id) || [];
-        swipedIds.push(uid); // exclude self
+        swipedIds.push(uid);
 
-        // Fetch profiles I haven't swiped on
         let query = supabase
           .from('profiles')
           .select('id, name, bio, gender, date_of_birth, relationship_goal, diet, program, department')
           .not('id', 'in', `(${swipedIds.join(',')})`)
           .limit(20);
 
-        // Filter by gender preference if set
         if (myProfile?.pref_gender && myProfile.pref_gender.length > 0) {
           query = query.in('gender', myProfile.pref_gender);
         }
@@ -77,7 +75,6 @@ export default function DiscoverPage() {
         console.log('Discover candidates:', candidateProfiles?.length, 'Error:', queryError);
 
         if (candidateProfiles && candidateProfiles.length > 0) {
-          // Get my interests for shared interest matching
           const { data: myInterests } = await supabase
             .from('user_interests')
             .select('interest_id, interests(name)')
@@ -123,6 +120,21 @@ export default function DiscoverPage() {
       swiped_id: currentProfile.id,
       direction,
     });
+
+    if (direction === 'like') {
+      const { data: mutualCheck } = await supabase
+        .from('swipes')
+        .select('id')
+        .eq('swiper_id', currentProfile.id)
+        .eq('swiped_id', userId)
+        .eq('direction', 'like')
+        .maybeSingle();
+
+      if (mutualCheck) {
+        setMatchedName(currentProfile.name);
+        setTimeout(() => setShowMatch(true), 350);
+      }
+    }
 
     setTimeout(() => {
       setSwipeDirection(null);
@@ -317,6 +329,33 @@ export default function DiscoverPage() {
           >
             <Heart className="w-8 h-8" />
           </button>
+        </div>
+      )}
+
+      {showMatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="text-center px-6">
+            <div className="text-6xl mb-4 animate-bounce">🎉</div>
+            <h2 className="font-serif text-4xl italic text-spark-400 mb-2">It's a Match!</h2>
+            <p className="text-neutral-400 mb-2">
+              You and <span className="text-white font-semibold">{matchedName}</span> liked each other
+            </p>
+            <p className="text-sm text-neutral-500 mb-8">Start a conversation now!</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => router.push('/chat')}
+                className="bg-spark-500 hover:bg-spark-400 text-white font-semibold py-3 px-8 rounded-xl transition-colors"
+              >
+                Say Hi 👋
+              </button>
+              <button
+                onClick={() => setShowMatch(false)}
+                className="border border-neutral-700 text-neutral-300 font-semibold py-3 px-8 rounded-xl hover:bg-neutral-800 transition-colors"
+              >
+                Keep Swiping
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
