@@ -13,9 +13,9 @@ export function isIITDEmail(email: string): boolean {
  * Sign in with email and password.
  */
 export async function signInWithPassword(email: string, password: string, captchaToken?: string) {
-  if (!isIITDEmail(email)) {
-    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  }
+  // if (!isIITDEmail(email)) {
+  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  // }
 
   const options: any = {};
   if (captchaToken) {
@@ -36,9 +36,9 @@ export async function signInWithPassword(email: string, password: string, captch
  * Sends a confirmation email for verification.
  */
 export async function signUpWithPassword(email: string, password: string, captchaToken?: string) {
-  if (!isIITDEmail(email)) {
-    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  }
+  // if (!isIITDEmail(email)) {
+  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  // }
 
   const options: any = {
     emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -60,9 +60,9 @@ export async function signUpWithPassword(email: string, password: string, captch
  * Send a password reset email.
  */
 export async function resetPassword(email: string, captchaToken?: string) {
-  if (!isIITDEmail(email)) {
-    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  }
+  // if (!isIITDEmail(email)) {
+  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  // }
 
   const options: any = {
     redirectTo: `${window.location.origin}/auth/reset`,
@@ -80,9 +80,9 @@ export async function resetPassword(email: string, captchaToken?: string) {
  * Send a magic link to an @iitd.ac.in email (kept for backward compat).
  */
 export async function sendMagicLink(email: string) {
-  if (!isIITDEmail(email)) {
-    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  }
+  // if (!isIITDEmail(email)) {
+  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  // }
 
   const { error } = await supabase.auth.signInWithOtp({
     email,

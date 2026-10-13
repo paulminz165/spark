@@ -78,10 +78,10 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    if (!isIITDEmail(email)) {
-      setError('Only @iitd.ac.in emails are allowed');
-      return;
-    }
+    // if (!isIITDEmail(email)) {
+    //   setError('Only @iitd.ac.in emails are allowed');
+    //   return;
+    // }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -112,10 +112,10 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    if (!isIITDEmail(email)) {
-      setError('Only @iitd.ac.in emails are allowed');
-      return;
-    }
+    // if (!isIITDEmail(email)) {
+    //   setError('Only @iitd.ac.in emails are allowed');
+    //   return;
+    // }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -155,10 +155,10 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    if (!isIITDEmail(email)) {
-      setError('Only @iitd.ac.in emails are allowed');
-      return;
-    }
+    // if (!isIITDEmail(email)) {
+    //   setError('Only @iitd.ac.in emails are allowed');
+    //   return;
+    // }
 
     setLoading(true);
     const { error: resetError } = await resetPassword(
