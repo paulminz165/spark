@@ -1,41 +1,190 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { sendMagicLink, isIITDEmail } from '@/lib/auth';
-import { Flame, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import {
+  signInWithPassword,
+  signUpWithPassword,
+  resetPassword,
+  isIITDEmail,
+  getOrCreateProfile,
+  checkOnboardingStatus,
+} from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
+import { Flame, Mail, Lock, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
-type AuthStep = 'email' | 'sent';
+type AuthMode = 'login' | 'register' | 'forgot' | 'sent';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+
+function TurnstileWidget({ onToken }: { onToken: (token: string) => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const widgetId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY) return;
+
+    const renderWidget = () => {
+      if (containerRef.current && (window as any).turnstile && !widgetId.current) {
+        widgetId.current = (window as any).turnstile.render(containerRef.current, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: (token: string) => onToken(token),
+          theme: 'dark',
+          size: 'normal',
+        });
+      }
+    };
+
+    // Load Turnstile script if not already loaded
+    if (!(window as any).turnstile) {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.onload = renderWidget;
+      document.head.appendChild(script);
+    } else {
+      renderWidget();
+    }
+
+    return () => {
+      if (widgetId.current && (window as any).turnstile) {
+        (window as any).turnstile.remove(widgetId.current);
+        widgetId.current = null;
+      }
+    };
+  }, [onToken]);
+
+  if (!TURNSTILE_SITE_KEY) return null;
+  return <div ref={containerRef} className="flex justify-center" />;
+}
 
 export default function AuthPage() {
   const router = useRouter();
-  const [step, setStep] = useState<AuthStep>('email');
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [sentEmail, setSentEmail] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCaptchaToken = useCallback((token: string) => {
+    setCaptchaToken(token);
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // if (!isIITDEmail(email)) {
-    //   setError('Only @iitd.ac.in emails are allowed');
-    //   return;
-    // }
-
-    setLoading(true);
-    const { error: sendError } = await sendMagicLink(email);
-    setLoading(false);
-
-    if (sendError) {
-      setError(sendError.message);
+    if (!isIITDEmail(email)) {
+      setError('Only @iitd.ac.in emails are allowed');
       return;
     }
 
-    setStep('sent');
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    const { data, error: loginError } = await signInWithPassword(
+      email,
+      password,
+      captchaToken || undefined
+    );
+    setLoading(false);
+
+    if (loginError) {
+      setError(loginError.message);
+      return;
+    }
+
+    if (data?.session) {
+      await getOrCreateProfile(data.session.user.id, data.session.user.email || '');
+      const { completed } = await checkOnboardingStatus(data.session.user.id);
+      router.replace(completed ? '/dashboard' : '/onboarding');
+    }
   };
 
-  if (step === 'sent') {
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!isIITDEmail(email)) {
+      setError('Only @iitd.ac.in emails are allowed');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    const { data, error: signUpError } = await signUpWithPassword(
+      email,
+      password,
+      captchaToken || undefined
+    );
+    setLoading(false);
+
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
+    }
+
+    // If email confirmation is enabled, show the "check email" screen
+    if (data?.user && !data.session) {
+      setSentEmail(email);
+      setMode('sent');
+    } else if (data?.session) {
+      // If auto-confirmed, go to onboarding
+      await getOrCreateProfile(data.session.user.id, data.session.user.email || '');
+      router.replace('/onboarding');
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!isIITDEmail(email)) {
+      setError('Only @iitd.ac.in emails are allowed');
+      return;
+    }
+
+    setLoading(true);
+    const { error: resetError } = await resetPassword(
+      email,
+      captchaToken || undefined
+    );
+    setLoading(false);
+
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+
+    setSentEmail(email);
+    setMode('sent');
+  };
+
+  const switchMode = (newMode: AuthMode) => {
+    setMode(newMode);
+    setError('');
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  // "Email sent" confirmation screen
+  if (mode === 'sent') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
         <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-6">
@@ -43,18 +192,18 @@ export default function AuthPage() {
         </div>
         <h2 className="font-serif text-2xl mb-2">Check your email</h2>
         <p className="text-neutral-400 text-sm mb-2">
-          We sent a login link to
+          We sent a link to
         </p>
-        <p className="text-spark-400 font-medium mb-8">{email}</p>
+        <p className="text-spark-400 font-medium mb-8">{sentEmail}</p>
         <p className="text-neutral-500 text-xs max-w-xs">
-          Click the link in the email to sign in. Check your spam folder if you
+          Click the link in the email to continue. Check your spam folder if you
           don't see it within a minute.
         </p>
         <button
-          onClick={() => setStep('email')}
+          onClick={() => switchMode('login')}
           className="mt-8 text-neutral-400 text-sm flex items-center gap-1 hover:text-neutral-300"
         >
-          <ArrowLeft className="w-4 h-4" /> Use a different email
+          <ArrowLeft className="w-4 h-4" /> Back to login
         </button>
       </div>
     );
@@ -73,12 +222,28 @@ export default function AuthPage() {
         <Flame className="w-6 h-6 text-spark-500" />
       </div>
 
-      <h1 className="font-serif text-3xl mb-2">Sign in to Spark</h1>
+      <h1 className="font-serif text-3xl mb-2">
+        {mode === 'login' && 'Sign in to Spark'}
+        {mode === 'register' && 'Join Spark'}
+        {mode === 'forgot' && 'Reset password'}
+      </h1>
       <p className="text-neutral-400 text-sm mb-8">
-        Use your IIT Delhi email to get started
+        {mode === 'login' && 'Welcome back — sign in with your IIT Delhi email'}
+        {mode === 'register' && 'Create your account with your IIT Delhi email'}
+        {mode === 'forgot' && "We'll send you a link to reset your password"}
       </p>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
+      <form
+        onSubmit={
+          mode === 'login'
+            ? handleLogin
+            : mode === 'register'
+              ? handleRegister
+              : handleForgotPassword
+        }
+        className="w-full max-w-xs space-y-3"
+      >
+        {/* Email */}
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
           <input
@@ -91,22 +256,118 @@ export default function AuthPage() {
           />
         </div>
 
+        {/* Password (login & register) */}
+        {mode !== 'forgot' && (
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              minLength={6}
+              className="w-full bg-surface-raised border border-neutral-800 rounded-xl py-3 pl-11 pr-11 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-spark-500/50 transition-colors"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-400"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        )}
+
+        {/* Confirm password (register only) */}
+        {mode === 'register' && (
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm password"
+              minLength={6}
+              className="w-full bg-surface-raised border border-neutral-800 rounded-xl py-3 pl-11 pr-4 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-spark-500/50 transition-colors"
+              required
+            />
+          </div>
+        )}
+
+        {/* Forgot password link (login only) */}
+        {mode === 'login' && (
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={() => switchMode('forgot')}
+              className="text-xs text-spark-400 hover:text-spark-300"
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
+
+        {/* CAPTCHA */}
+        <TurnstileWidget onToken={handleCaptchaToken} />
+
+        {/* Error */}
         {error && (
           <p className="text-red-400 text-xs text-center">{error}</p>
         )}
 
+        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
           className="w-full bg-spark-500 hover:bg-spark-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
         >
-          {loading ? 'Sending...' : 'Send Magic Link'}
+          {loading
+            ? 'Please wait...'
+            : mode === 'login'
+              ? 'Sign In'
+              : mode === 'register'
+                ? 'Create Account'
+                : 'Send Reset Link'}
         </button>
       </form>
 
-      <p className="text-xs text-neutral-600 mt-6 text-center max-w-xs">
-        We'll email you a link to sign in — no password needed.
-      </p>
+      {/* Mode switch links */}
+      <div className="mt-6 text-sm text-neutral-500">
+        {mode === 'login' && (
+          <p>
+            New to Spark?{' '}
+            <button
+              onClick={() => switchMode('register')}
+              className="text-spark-400 hover:text-spark-300"
+            >
+              Create an account
+            </button>
+          </p>
+        )}
+        {mode === 'register' && (
+          <p>
+            Already have an account?{' '}
+            <button
+              onClick={() => switchMode('login')}
+              className="text-spark-400 hover:text-spark-300"
+            >
+              Sign in
+            </button>
+          </p>
+        )}
+        {mode === 'forgot' && (
+          <p>
+            Remember your password?{' '}
+            <button
+              onClick={() => switchMode('login')}
+              className="text-spark-400 hover:text-spark-300"
+            >
+              Sign in
+            </button>
+          </p>
+        )}
+      </div>
     </div>
   );
 }

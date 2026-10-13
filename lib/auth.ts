@@ -10,19 +10,84 @@ export function isIITDEmail(email: string): boolean {
 }
 
 /**
- * Send a magic link to an @iitd.ac.in email.
- * Supabase handles the email delivery (free tier: 4 emails/hour).
+ * Sign in with email and password.
+ */
+export async function signInWithPassword(email: string, password: string, captchaToken?: string) {
+  if (!isIITDEmail(email)) {
+    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  }
+
+  const options: any = {};
+  if (captchaToken) {
+    options.captchaToken = captchaToken;
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+    options,
+  });
+
+  return { data, error };
+}
+
+/**
+ * Register a new account with email and password.
+ * Sends a confirmation email for verification.
+ */
+export async function signUpWithPassword(email: string, password: string, captchaToken?: string) {
+  if (!isIITDEmail(email)) {
+    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  }
+
+  const options: any = {
+    emailRedirectTo: `${window.location.origin}/auth/callback`,
+  };
+  if (captchaToken) {
+    options.captchaToken = captchaToken;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options,
+  });
+
+  return { data, error };
+}
+
+/**
+ * Send a password reset email.
+ */
+export async function resetPassword(email: string, captchaToken?: string) {
+  if (!isIITDEmail(email)) {
+    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  }
+
+  const options: any = {
+    redirectTo: `${window.location.origin}/auth/reset`,
+  };
+  if (captchaToken) {
+    options.captchaToken = captchaToken;
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, options);
+
+  return { error };
+}
+
+/**
+ * Send a magic link to an @iitd.ac.in email (kept for backward compat).
  */
 export async function sendMagicLink(email: string) {
-  // Temporarily allow any email for testing
-// if (!isIITDEmail(email)) {
-//   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-// }
+  if (!isIITDEmail(email)) {
+    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  }
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
     },
   });
 
@@ -42,7 +107,6 @@ export async function signOut() {
  * Creates a skeleton profile if one doesn't exist yet.
  */
 export async function getOrCreateProfile(userId: string, email: string) {
-  // Try to get existing profile
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
@@ -51,13 +115,12 @@ export async function getOrCreateProfile(userId: string, email: string) {
 
   if (profile) return { profile, error: null };
 
-  // Create new profile
   const { data: newProfile, error: createError } = await supabase
     .from('profiles')
     .insert({
       id: userId,
       email,
-      name: email.split('@')[0], // Temporary name from email
+      name: email.split('@')[0],
     })
     .select()
     .single();
