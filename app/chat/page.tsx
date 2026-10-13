@@ -11,7 +11,6 @@ interface ChatPreview {
   matchedUser: {
     id: string;
     name: string;
-    avatar_url: string | null;
   };
   lastMessage: string | null;
   lastMessageAt: string | null;
@@ -33,12 +32,12 @@ export default function ChatListPage() {
 
       const uid = session.user.id;
 
-      // Get all matches where both users liked
+      // Get all mutual matches (status: mutual, accepted, or both_liked)
       const { data: matches } = await supabase
         .from('matches')
         .select('id, user_a, user_b')
         .or(`user_a.eq.${uid},user_b.eq.${uid}`)
-        .eq('status', 'both_liked');
+        .in('status', ['both_liked', 'mutual', 'accepted']);
 
       if (!matches || matches.length === 0) {
         setLoading(false);
@@ -52,7 +51,7 @@ export default function ChatListPage() {
 
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, name, avatar_url')
+        .select('id, name')
         .in('id', otherIds);
 
       const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
@@ -81,8 +80,10 @@ export default function ChatListPage() {
         });
       }
 
-      // Sort by last message time
+      // Sort: unread first, then by last message time
       chatPreviews.sort((a, b) => {
+        if (a.unread && !b.unread) return -1;
+        if (!a.unread && b.unread) return 1;
         if (!a.lastMessageAt) return 1;
         if (!b.lastMessageAt) return -1;
         return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
@@ -108,49 +109,45 @@ export default function ChatListPage() {
       <div className="px-6 pt-8 pb-4">
         <h1 className="font-serif text-3xl mb-1">Chats</h1>
         <p className="text-sm text-neutral-500">
-          {chats.length > 0 ? 'Your conversations' : 'No chats yet — like a match to start'}
+          {chats.length > 0 ? `${chats.length} matches` : 'No matches yet — start swiping!'}
         </p>
       </div>
 
       {chats.length > 0 ? (
-        <div className="divide-y divide-neutral-800">
+        <div className="px-4 space-y-1.5">
           {chats.map((chat) => (
             <button
               key={chat.matchId}
               onClick={() => router.push(`/chat/${chat.matchId}`)}
-              className="w-full flex items-center gap-3 px-6 py-4 hover:bg-surface-raised transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-raised transition-colors text-left"
             >
-              {/* Avatar */}
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-spark-500/30 to-spark-700/30 flex items-center justify-center flex-shrink-0">
-                {chat.matchedUser.avatar_url ? (
-                  <img
-                    src={chat.matchedUser.avatar_url}
-                    alt=""
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-spark-400 font-serif text-lg">
-                    {chat.matchedUser.name[0]}
-                  </span>
-                )}
+              {/* Avatar circle */}
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-spark-500/30 to-spark-700/30 flex items-center justify-center flex-shrink-0">
+                <span className="text-spark-400 font-serif text-base">
+                  {chat.matchedUser.name[0]}
+                </span>
               </div>
 
+              {/* Name and last message */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">{chat.matchedUser.name}</span>
+                  <span className={`font-medium text-sm ${chat.unread ? 'text-white' : 'text-neutral-300'}`}>
+                    {chat.matchedUser.name}
+                  </span>
                   {chat.lastMessageAt && (
-                    <span className="text-xs text-neutral-600">
+                    <span className="text-[10px] text-neutral-600 flex-shrink-0">
                       {formatTime(chat.lastMessageAt)}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-neutral-500 truncate">
+                <p className={`text-xs truncate ${chat.unread ? 'text-neutral-300 font-medium' : 'text-neutral-600'}`}>
                   {chat.lastMessage || 'Say hi! 👋'}
                 </p>
               </div>
 
+              {/* Unread dot */}
               {chat.unread && (
-                <div className="w-2.5 h-2.5 rounded-full bg-spark-500 flex-shrink-0" />
+                <div className="w-2 h-2 rounded-full bg-spark-500 flex-shrink-0" />
               )}
             </button>
           ))}
@@ -162,7 +159,7 @@ export default function ChatListPage() {
           </div>
           <h2 className="font-serif text-xl mb-2">No conversations yet</h2>
           <p className="text-sm text-neutral-500 max-w-xs">
-            When you and a match both like each other, you can start chatting here.
+            When you and someone both like each other, they'll appear here to chat.
           </p>
         </div>
       )}

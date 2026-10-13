@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Flame, MessageCircle, User, Globe, Compass } from 'lucide-react';
+import { Heart, MessageCircle, User, Globe, Compass } from 'lucide-react';
 
 interface BottomNavProps {
   active: 'discover' | 'matches' | 'chat' | 'confessions' | 'profile';
@@ -9,7 +9,7 @@ interface BottomNavProps {
 
 const NAV_ITEMS = [
   { key: 'discover', label: 'Discover', icon: Compass, href: '/discover' },
-  { key: 'matches', label: 'Matches', icon: Flame, href: '/dashboard' },
+  { key: 'matches', label: 'Liked You', icon: Heart, href: '/dashboard' },
   { key: 'chat', label: 'Chat', icon: MessageCircle, href: '/chat' },
   { key: 'confessions', label: 'Wall', icon: Globe, href: '/confessions' },
   { key: 'profile', label: 'Profile', icon: User, href: '/profile' },
