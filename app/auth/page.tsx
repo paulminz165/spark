@@ -223,8 +223,8 @@ export default function AuthPage() {
       </div>
 
       <h1 className="font-serif text-3xl mb-2">
-        {mode === 'login' && 'Sign in to Spark'}
-        {mode === 'register' && 'Join Spark'}
+        {mode === 'login' && 'Sign in to Wynked'}
+        {mode === 'register' && 'Join Wynked'}
         {mode === 'forgot' && 'Reset password'}
       </h1>
       <p className="text-neutral-400 text-sm mb-8">
