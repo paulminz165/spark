@@ -151,7 +151,7 @@ export default function ChatPage() {
             {matchedName?.[0] || '?'}
           </span>
         </div>
-        <span className="font-medium">{matchedName || 'Loading...'}</span>
+        <span className="font-medium">{matchedName?.charAt(0)?.toUpperCase() || '?'}</span>
       </div>
 
       {/* Messages */}

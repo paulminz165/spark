@@ -124,7 +124,7 @@ export default function ChatListPage() {
               {/* Avatar circle */}
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-spark-500/30 to-spark-700/30 flex items-center justify-center flex-shrink-0">
                 <span className="text-spark-400 font-serif text-base">
-                  {chat.matchedUser.name[0]}
+                  {chat.matchedUser.name?.charAt(0)?.toUpperCase() || '?'}
                 </span>
               </div>
 
@@ -132,7 +132,7 @@ export default function ChatListPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className={`font-medium text-sm ${chat.unread ? 'text-white' : 'text-neutral-300'}`}>
-                    {chat.matchedUser.name}
+                    {chat.matchedUser.name?.charAt(0)?.toUpperCase() || '?'}
                   </span>
                   {chat.lastMessageAt && (
                     <span className="text-[10px] text-neutral-600 flex-shrink-0">
