@@ -6,7 +6,7 @@ import {
   signInWithPassword,
   signUpWithPassword,
   resetPassword,
-  isIITDEmail,
+  //isIITDEmail, //uncomment this later IIT delhi
   getOrCreateProfile,
   checkOnboardingStatus,
   verifyEmailOtp,
