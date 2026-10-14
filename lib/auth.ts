@@ -11,19 +11,44 @@ export function isIITDEmail(email: string): boolean {
 
 /**
  * Sign in with email and password.
+ * If email not confirmed, auto-resends OTP and flags needsVerification.
  */
 export async function signInWithPassword(email: string, password: string, captchaToken?: string) {
-  // if (!isIITDEmail(email)) {
-  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  // }
-
   const options: any = {};
   if (captchaToken) {
     options.captchaToken = captchaToken;
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+    email: email.toLowerCase().trim(),
+    password,
+    options,
+  });
+
+  if (error?.message?.includes('Email not confirmed')) {
+    await resendOtp(email);
+    return { data, error, needsVerification: true };
+  }
+
+  return { data, error, needsVerification: false };
+}
+
+/**
+ * Register a new account — sends OTP to email for verification.
+ * Only @iitd.ac.in emails are accepted.
+ */
+export async function signUpWithPassword(email: string, password: string, captchaToken?: string) {
+  if (!isIITDEmail(email)) {
+    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  }
+
+  const options: any = {};
+  if (captchaToken) {
+    options.captchaToken = captchaToken;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email.toLowerCase().trim(),
     password,
     options,
   });
@@ -32,38 +57,34 @@ export async function signInWithPassword(email: string, password: string, captch
 }
 
 /**
- * Register a new account with email and password.
- * Sends a confirmation email for verification.
+ * Verify the 6-digit OTP sent to email during signup.
  */
-export async function signUpWithPassword(email: string, password: string, captchaToken?: string) {
-  // if (!isIITDEmail(email)) {
-  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  // }
-
-  const options: any = {
-    emailRedirectTo: `${window.location.origin}/auth/callback`,
-  };
-  if (captchaToken) {
-    options.captchaToken = captchaToken;
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options,
+export async function verifyEmailOtp(email: string, token: string) {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: email.toLowerCase().trim(),
+    token,
+    type: 'signup',
   });
 
   return { data, error };
+}
+
+/**
+ * Resend the OTP verification email.
+ */
+export async function resendOtp(email: string) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.toLowerCase().trim(),
+  });
+
+  return { error };
 }
 
 /**
  * Send a password reset email.
  */
 export async function resetPassword(email: string, captchaToken?: string) {
-  // if (!isIITDEmail(email)) {
-  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  // }
-
   const options: any = {
     redirectTo: `${window.location.origin}/auth/reset`,
   };
@@ -71,25 +92,10 @@ export async function resetPassword(email: string, captchaToken?: string) {
     options.captchaToken = captchaToken;
   }
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, options);
-
-  return { error };
-}
-
-/**
- * Send a magic link to an @iitd.ac.in email (kept for backward compat).
- */
-export async function sendMagicLink(email: string) {
-  // if (!isIITDEmail(email)) {
-  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  // }
-
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.toLowerCase().trim(),
+    options,
+  );
 
   return { error };
 }

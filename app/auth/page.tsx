@@ -9,11 +9,13 @@ import {
   isIITDEmail,
   getOrCreateProfile,
   checkOnboardingStatus,
+  verifyEmailOtp,
+  resendOtp,
 } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { Flame, Mail, Lock, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Flame, Mail, Lock, ArrowLeft, CheckCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 
-type AuthMode = 'login' | 'register' | 'forgot' | 'sent';
+type AuthMode = 'login' | 'register' | 'forgot' | 'sent' | 'otp';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 
@@ -35,7 +37,6 @@ function TurnstileWidget({ onToken }: { onToken: (token: string) => void }) {
       }
     };
 
-    // Load Turnstile script if not already loaded
     if (!(window as any).turnstile) {
       const script = document.createElement('script');
       script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
@@ -70,18 +71,104 @@ export default function AuthPage() {
   const [captchaToken, setCaptchaToken] = useState('');
   const [sentEmail, setSentEmail] = useState('');
 
+  // OTP state
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   const handleCaptchaToken = useCallback((token: string) => {
     setCaptchaToken(token);
   }, []);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return; // only digits
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1); // take last digit
+    setOtp(newOtp);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 0) return;
+    const newOtp = [...otp];
+    for (let i = 0; i < 6; i++) {
+      newOtp[i] = pasted[i] || '';
+    }
+    setOtp(newOtp);
+    // Focus last filled or the next empty
+    const focusIndex = Math.min(pasted.length, 5);
+    otpRefs.current[focusIndex]?.focus();
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const code = otp.join('');
+    if (code.length !== 6) {
+      setError('Please enter the full 6-digit code');
+      return;
+    }
+
+    setLoading(true);
+    const { data, error: verifyError } = await verifyEmailOtp(sentEmail, code);
+    setLoading(false);
+
+    if (verifyError) {
+      setError(verifyError.message);
+      return;
+    }
+
+    if (data?.session) {
+      await getOrCreateProfile(data.session.user.id, data.session.user.email || '');
+      const { completed } = await checkOnboardingStatus(data.session.user.id);
+      router.replace(completed ? '/dashboard' : '/onboarding');
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setError('');
+    setLoading(true);
+    const { error: resendError } = await resendOtp(sentEmail);
+    setLoading(false);
+
+    if (resendError) {
+      setError(resendError.message);
+      return;
+    }
+
+    setResendCooldown(60);
+    setOtp(['', '', '', '', '', '']);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // if (!isIITDEmail(email)) {
-    //   setError('Only @iitd.ac.in emails are allowed');
-    //   return;
-    // }
+    if (!isIITDEmail(email)) {
+      setError('Only @iitd.ac.in emails are allowed');
+      return;
+    }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -89,12 +176,20 @@ export default function AuthPage() {
     }
 
     setLoading(true);
-    const { data, error: loginError } = await signInWithPassword(
+    const { data, error: loginError, needsVerification } = await signInWithPassword(
       email,
       password,
       captchaToken || undefined
     );
     setLoading(false);
+
+    if (needsVerification) {
+      setSentEmail(email.toLowerCase().trim());
+      setOtp(['', '', '', '', '', '']);
+      setResendCooldown(60);
+      setMode('otp');
+      return;
+    }
 
     if (loginError) {
       setError(loginError.message);
@@ -112,10 +207,10 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    // if (!isIITDEmail(email)) {
-    //   setError('Only @iitd.ac.in emails are allowed');
-    //   return;
-    // }
+    if (!isIITDEmail(email)) {
+      setError('Only @iitd.ac.in emails are allowed');
+      return;
+    }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -140,14 +235,12 @@ export default function AuthPage() {
       return;
     }
 
-    // If email confirmation is enabled, show the "check email" screen
-    if (data?.user && !data.session) {
-      setSentEmail(email);
-      setMode('sent');
-    } else if (data?.session) {
-      // If auto-confirmed, go to onboarding
-      await getOrCreateProfile(data.session.user.id, data.session.user.email || '');
-      router.replace('/onboarding');
+    // After signup, go to OTP screen
+    if (data?.user) {
+      setSentEmail(email.toLowerCase().trim());
+      setOtp(['', '', '', '', '', '']);
+      setResendCooldown(60);
+      setMode('otp');
     }
   };
 
@@ -155,10 +248,10 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    // if (!isIITDEmail(email)) {
-    //   setError('Only @iitd.ac.in emails are allowed');
-    //   return;
-    // }
+    if (!isIITDEmail(email)) {
+      setError('Only @iitd.ac.in emails are allowed');
+      return;
+    }
 
     setLoading(true);
     const { error: resetError } = await resetPassword(
@@ -181,9 +274,77 @@ export default function AuthPage() {
     setError('');
     setPassword('');
     setConfirmPassword('');
+    setOtp(['', '', '', '', '', '']);
   };
 
-  // "Email sent" confirmation screen
+  // OTP verification screen
+  if (mode === 'otp') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-spark-500/20 flex items-center justify-center mb-6">
+          <ShieldCheck className="w-8 h-8 text-spark-400" />
+        </div>
+        <h2 className="font-serif text-2xl mb-2">Verify your email</h2>
+        <p className="text-neutral-400 text-sm mb-1">
+          We sent a 6-digit code to
+        </p>
+        <p className="text-spark-400 font-medium mb-8">{sentEmail}</p>
+
+        <form onSubmit={handleVerifyOtp} className="w-full max-w-xs space-y-4">
+          {/* OTP inputs */}
+          <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { otpRefs.current[i] = el; }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleOtpChange(i, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                className="w-11 h-13 bg-surface-raised border border-[#2A2A3E] rounded-xl text-center text-lg font-semibold focus:outline-none focus:border-spark-500/50 transition-colors"
+              />
+            ))}
+          </div>
+
+          {error && (
+            <p className="text-red-400 text-xs text-center">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || otp.join('').length !== 6}
+            className="w-full bg-spark-500 hover:bg-spark-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors"
+          >
+            {loading ? 'Verifying...' : 'Verify Email'}
+          </button>
+        </form>
+
+        <div className="mt-6 text-sm text-neutral-400">
+          <p>
+            Didn't receive the code?{' '}
+            <button
+              onClick={handleResendOtp}
+              disabled={resendCooldown > 0}
+              className="text-spark-400 hover:text-spark-300 disabled:text-neutral-600 disabled:cursor-not-allowed"
+            >
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
+            </button>
+          </p>
+        </div>
+
+        <button
+          onClick={() => switchMode('login')}
+          className="mt-4 text-neutral-400 text-sm flex items-center gap-1 hover:text-neutral-300"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to login
+        </button>
+      </div>
+    );
+  }
+
+  // "Email sent" confirmation screen (for forgot password only)
   if (mode === 'sent') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
@@ -192,11 +353,11 @@ export default function AuthPage() {
         </div>
         <h2 className="font-serif text-2xl mb-2">Check your email</h2>
         <p className="text-neutral-400 text-sm mb-2">
-          We sent a link to
+          We sent a password reset link to
         </p>
         <p className="text-spark-400 font-medium mb-8">{sentEmail}</p>
         <p className="text-neutral-400 text-xs max-w-xs">
-          Click the link in the email to continue. Check your spam folder if you
+          Click the link in the email to reset your password. Check your spam folder if you
           don't see it within a minute.
         </p>
         <button
@@ -272,7 +433,7 @@ export default function AuthPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-300"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
