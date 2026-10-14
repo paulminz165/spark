@@ -49,7 +49,7 @@ export async function calculateCompatibility(
 
   // A. Interest score (40% weight)
   // Jaccard similarity: shared / (total unique)
-  const totalUnique = new Set([...userInterestIds, ...otherInterestIds]).size;
+  const totalUnique = new Set([...Array.from(userInterestIds), ...Array.from(otherInterestIds)]).size;
   const interestScore = totalUnique > 0 ? (sharedIds.length / totalUnique) * 100 : 0;
 
   // B. Quiz score (40% weight)
