@@ -5,9 +5,9 @@ const ALLOWED_DOMAIN = 'iitd.ac.in';
 /**
  * Validate that an email is an IIT Delhi email.
  */
-export function isIITDEmail(email: string): boolean {
-  return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
-}
+// export function isIITDEmail(email: string): boolean {
+//   return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
+// }
 
 /**
  * Sign in with email and password.
