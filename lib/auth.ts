@@ -140,14 +140,24 @@ export async function getOrCreateProfile(userId: string, email: string) {
 export async function checkOnboardingStatus(userId: string) {
   const { data } = await supabase
     .from('profiles')
-    .select('quiz_completed, name, date_of_birth, gender')
+    .select('quiz_completed, name, bio, date_of_birth, gender, relationship_goal')
     .eq('id', userId)
     .single();
 
   if (!data) return { completed: false, step: 'profile' };
 
-  if (!data.name || !data.date_of_birth || !data.gender) {
+  if (!data.name || !data.bio || !data.date_of_birth || !data.gender || !data.relationship_goal) {
     return { completed: false, step: 'profile' };
+  }
+
+  // Check at least 3 interests selected
+  const { count } = await supabase
+    .from('user_interests')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if ((count ?? 0) < 3) {
+    return { completed: false, step: 'interests' };
   }
 
   if (!data.quiz_completed) {

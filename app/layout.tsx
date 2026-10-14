@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import AuthGuard from '@/components/AuthGuard';
 
 export const metadata: Metadata = {
-  title: 'Spark — IIT Delhi Dating',
+  title: 'Wynked — IIT Delhi Dating',
   description: 'Compatibility-first dating for IIT Delhi students',
   manifest: '/manifest.json',
 };
@@ -23,7 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-surface">
         <main className="mx-auto max-w-md min-h-screen">
-          {children}
+          <AuthGuard>{children}</AuthGuard>
         </main>
       </body>
     </html>
