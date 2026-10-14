@@ -40,7 +40,7 @@ export async function calculateCompatibility(
   const otherInterestIds = new Set(otherInterests?.map((i: any) => i.interest_id) || []);
 
   // Shared interests
-  const sharedIds = [...userInterestIds].filter((id) => otherInterestIds.has(id));
+  const sharedIds = Array.from(userInterestIds).filter((id) => otherInterestIds.has(id));
   const sharedInterests = (otherInterests || [])
     .filter((i: any) => sharedIds.includes(i.interest_id))
     .map((i: any) => i.interests?.name || '');
