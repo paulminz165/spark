@@ -4,9 +4,11 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/BottomNav';
+import ProfileCard from '@/components/ProfileCard';
+import { calculateCompatibility } from '@/lib/compatibility';
 import { Flame, X, Heart, Sparkles } from 'lucide-react';
 
-interface Profile {
+interface EnrichedProfile {
   id: string;
   name: string;
   bio: string;
@@ -14,14 +16,19 @@ interface Profile {
   date_of_birth: string;
   relationship_goal: string;
   diet: string;
-  program: string;
-  department: string;
   shared_interests: string[];
+  all_interests: string[];
+  compatibility: number;
+  compatibilityBreakdown: {
+    interests: number;
+    quiz: number;
+    goals: number;
+  };
 }
 
 export default function DiscoverPage() {
   const router = useRouter();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profiles, setProfiles] = useState<EnrichedProfile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [swiping, setSwiping] = useState(false);
@@ -48,9 +55,16 @@ export default function DiscoverPage() {
 
         const { data: myProfile } = await supabase
           .from('profiles')
-          .select('pref_gender, pref_age_min, pref_age_max, gender')
+          .select('pref_gender, pref_age_min, pref_age_max, gender, relationship_goal')
           .eq('id', uid)
           .single();
+
+        const { data: myInterests } = await supabase
+          .from('user_interests')
+          .select('interest_id, interests(name)')
+          .eq('user_id', uid);
+
+        const myInterestNames = myInterests?.map((i: any) => i.interests?.name).filter(Boolean) || [];
 
         const { data: swipedData } = await supabase
           .from('swipes')
@@ -62,7 +76,7 @@ export default function DiscoverPage() {
 
         let query = supabase
           .from('profiles')
-          .select('id, name, bio, gender, date_of_birth, relationship_goal, diet, program, department')
+          .select('id, name, bio, gender, date_of_birth, relationship_goal, diet')
           .not('id', 'in', `(${swipedIds.join(',')})`)
           .limit(20);
 
@@ -70,19 +84,10 @@ export default function DiscoverPage() {
           query = query.in('gender', myProfile.pref_gender);
         }
 
-        const { data: candidateProfiles, error: queryError } = await query;
-
-        console.log('Discover candidates:', candidateProfiles?.length, 'Error:', queryError);
+        const { data: candidateProfiles } = await query;
 
         if (candidateProfiles && candidateProfiles.length > 0) {
-          const { data: myInterests } = await supabase
-            .from('user_interests')
-            .select('interest_id, interests(name)')
-            .eq('user_id', uid);
-
-          const myInterestNames = myInterests?.map((i: any) => i.interests?.name).filter(Boolean) || [];
-
-          const enriched = await Promise.all(
+          const enriched: EnrichedProfile[] = await Promise.all(
             candidateProfiles.map(async (p) => {
               const { data: theirInterests } = await supabase
                 .from('user_interests')
@@ -92,10 +97,20 @@ export default function DiscoverPage() {
               const theirInterestNames = theirInterests?.map((i: any) => i.interests?.name).filter(Boolean) || [];
               const shared = myInterestNames.filter((name: string) => theirInterestNames.includes(name));
 
-              return { ...p, shared_interests: shared };
+              // await — calculateCompatibility is async
+              const result = await calculateCompatibility(uid, p.id);
+
+              return {
+                ...p,
+                shared_interests: shared,
+                all_interests: theirInterestNames,
+                compatibility: result.score,
+                compatibilityBreakdown: result.breakdown,
+              };
             })
           );
 
+          enriched.sort((a, b) => b.compatibility - a.compatibility);
           setProfiles(enriched);
         }
       } catch (err) {
@@ -115,7 +130,6 @@ export default function DiscoverPage() {
     setSwiping(true);
     setSwipeDirection(direction === 'like' ? 'right' : 'left');
 
-    // Wait for card exit animation
     await new Promise((r) => setTimeout(r, 300));
 
     try {
@@ -135,12 +149,12 @@ export default function DiscoverPage() {
           .maybeSingle();
 
         if (mutualCheck) {
-          setMatchedName(currentProfile.name);
+          setMatchedName(currentProfile.name?.charAt(0)?.toUpperCase() || '?');
           setSwipeDirection(null);
           setDragX(0);
           setSwiping(false);
           setShowMatch(true);
-          return; // Don't advance card — celebration is showing
+          return;
         }
       }
     } catch (err) {
@@ -186,10 +200,6 @@ export default function DiscoverPage() {
     else if (dragX < -100) handleSwipe('pass');
     else setDragX(0);
   };
-
-  const age = currentProfile?.date_of_birth
-    ? new Date().getFullYear() - new Date(currentProfile.date_of_birth).getFullYear()
-    : null;
 
   const cardRotation = dragX * 0.1;
   const cardOpacity = Math.max(0.5, 1 - Math.abs(dragX) / 400);
@@ -246,62 +256,11 @@ export default function DiscoverPage() {
               </div>
             )}
 
-            <div className="bg-surface-raised border border-[#2A2A3E] rounded-2xl overflow-hidden">
-              <div className="bg-gradient-to-br from-spark-500/20 to-spark-700/20 h-32 flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-4xl font-serif font-bold text-spark-400">
-                    {currentProfile.name?.charAt(0)?.toUpperCase()}
-                  </p>
-                  <p className="text-xs text-spark-400/60 mt-1">Compatibility over looks</p>
-                </div>
-              </div>
-
-              <div className="p-5">
-                <div className="mb-3">
-                  <h3 className="font-semibold text-xl">
-                    {currentProfile.name}
-                    {age && <span className="text-neutral-400 font-normal">, {age}</span>}
-                  </h3>
-                  <p className="text-sm text-neutral-400">
-                    {[currentProfile.program, currentProfile.department].filter(Boolean).join(' · ') || 'IIT Delhi'}
-                  </p>
-                </div>
-
-                {currentProfile.bio && (
-                  <p className="text-sm text-neutral-300 mb-4">&quot;{currentProfile.bio}&quot;</p>
-                )}
-
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {currentProfile.relationship_goal && (
-                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
-                      {currentProfile.relationship_goal}
-                    </span>
-                  )}
-                  {currentProfile.diet && (
-                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
-                      {currentProfile.diet}
-                    </span>
-                  )}
-                </div>
-
-                {currentProfile.shared_interests?.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs text-neutral-400 mb-2">Shared interests</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentProfile.shared_interests.map((interest) => (
-                        <span key={interest} className="text-xs bg-spark-500/10 text-spark-400 px-2.5 py-1 rounded-full">
-                          {interest}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {currentProfile.shared_interests?.length === 0 && (
-                  <p className="text-xs text-neutral-600 mb-4">No shared interests yet — opposites attract?</p>
-                )}
-              </div>
-            </div>
+            <ProfileCard
+              profile={currentProfile}
+              compatibilityScore={currentProfile.compatibility}
+              compatibilityBreakdown={currentProfile.compatibilityBreakdown}
+            />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
@@ -310,7 +269,7 @@ export default function DiscoverPage() {
             </div>
             <h2 className="font-serif text-xl mb-2">You&apos;ve seen everyone</h2>
             <p className="text-sm text-neutral-400 max-w-xs">
-              Check back later as more people join Spark. Meanwhile, check your matches!
+              Check back later as more people join Wynked. Meanwhile, check your matches!
             </p>
             <button
               onClick={() => router.push('/dashboard')}

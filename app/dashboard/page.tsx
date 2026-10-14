@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import BottomNav from '@/components/BottomNav';
+import ProfileCard from '@/components/ProfileCard';
+import { calculateCompatibility } from '@/lib/compatibility';
 import { Flame, Heart, X } from 'lucide-react';
 
 interface LikedByProfile {
@@ -17,10 +19,15 @@ interface LikedByProfile {
     date_of_birth: string;
     relationship_goal: string;
     diet: string;
-    program: string;
-    department: string;
   };
   shared_interests: string[];
+  all_interests: string[];
+  compatibility: number;
+  compatibilityBreakdown: {
+    interests: number;
+    quiz: number;
+    goals: number;
+  };
 }
 
 export default function DashboardPage() {
@@ -64,22 +71,10 @@ export default function DashboardPage() {
               const newSwipe = payload.new as any;
               if (newSwipe.direction !== 'like') return;
 
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('id, name, bio, gender, date_of_birth, relationship_goal, diet, program, department')
-                .eq('id', newSwipe.swiper_id)
-                .single();
-
-              if (!profile) return;
-
-              const shared = await getSharedInterests(uid, newSwipe.swiper_id);
-
-              setLikedByProfiles((prev) => [...prev, {
-                swipeId: newSwipe.id,
-                swiperId: newSwipe.swiper_id,
-                profile,
-                shared_interests: shared,
-              }]);
+              const enriched = await enrichProfile(uid, newSwipe.swiper_id, newSwipe.id);
+              if (enriched) {
+                setLikedByProfiles((prev) => [...prev, enriched]);
+              }
             }
           )
           .subscribe();
@@ -96,6 +91,45 @@ export default function DashboardPage() {
       if (channel) supabase.removeChannel(channel);
     };
   }, [router]);
+
+  const enrichProfile = async (myId: string, theirId: string, swipeId: string): Promise<LikedByProfile | null> => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name, bio, gender, date_of_birth, relationship_goal, diet')
+      .eq('id', theirId)
+      .single();
+
+    if (!profile) return null;
+
+    // Fetch my interests for shared calculation
+    const { data: myInterests } = await supabase
+      .from('user_interests')
+      .select('interest_id, interests(name)')
+      .eq('user_id', myId);
+
+    const myInterestNames = myInterests?.map((i: any) => i.interests?.name).filter(Boolean) || [];
+
+    const { data: theirInterests } = await supabase
+      .from('user_interests')
+      .select('interest_id, interests(name)')
+      .eq('user_id', theirId);
+
+    const theirInterestNames = theirInterests?.map((i: any) => i.interests?.name).filter(Boolean) || [];
+    const shared = myInterestNames.filter((n: string) => theirInterestNames.includes(n));
+
+    // calculateCompatibility is async — takes two user IDs
+    const result = await calculateCompatibility(myId, theirId);
+
+    return {
+      swipeId,
+      swiperId: theirId,
+      profile,
+      shared_interests: shared,
+      all_interests: theirInterestNames,
+      compatibility: result.score,
+      compatibilityBreakdown: result.breakdown,
+    };
+  };
 
   const loadLikes = async (uid: string) => {
     const { data: incomingLikes } = await supabase
@@ -116,44 +150,14 @@ export default function DashboardPage() {
 
     if (pendingLikes.length === 0) return;
 
-    const likerIds = pendingLikes.map((s) => s.swiper_id);
-
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, name, bio, gender, date_of_birth, relationship_goal, diet, program, department')
-      .in('id', likerIds);
-
-    if (!profiles) return;
-
-    const profileMap = new Map(profiles.map((p) => [p.id, p]));
-
     const enriched: LikedByProfile[] = [];
     for (const like of pendingLikes) {
-      const profile = profileMap.get(like.swiper_id);
-      if (!profile) continue;
-
-      const shared = await getSharedInterests(uid, like.swiper_id);
-      enriched.push({ swipeId: like.id, swiperId: like.swiper_id, profile, shared_interests: shared });
+      const profile = await enrichProfile(uid, like.swiper_id, like.id);
+      if (profile) enriched.push(profile);
     }
 
+    enriched.sort((a, b) => b.compatibility - a.compatibility);
     setLikedByProfiles(enriched);
-  };
-
-  const getSharedInterests = async (myId: string, theirId: string) => {
-    const { data: myInterests } = await supabase
-      .from('user_interests')
-      .select('interest_id, interests(name)')
-      .eq('user_id', myId);
-
-    const myNames = myInterests?.map((i: any) => i.interests?.name).filter(Boolean) || [];
-
-    const { data: theirInterests } = await supabase
-      .from('user_interests')
-      .select('interest_id, interests(name)')
-      .eq('user_id', theirId);
-
-    const theirNames = theirInterests?.map((i: any) => i.interests?.name).filter(Boolean) || [];
-    return myNames.filter((n: string) => theirNames.includes(n));
   };
 
   const currentProfile = likedByProfiles[currentIndex];
@@ -163,7 +167,6 @@ export default function DashboardPage() {
     setSwiping(true);
     setSwipeDirection(direction === 'like' ? 'right' : 'left');
 
-    // Wait for card exit animation
     await new Promise((r) => setTimeout(r, 300));
 
     try {
@@ -173,14 +176,13 @@ export default function DashboardPage() {
         direction,
       });
 
-      // They already liked me, so if I like back → it's a match
       if (direction === 'like') {
-        setMatchedName(currentProfile.profile.name);
+        setMatchedName(currentProfile.profile.name?.charAt(0)?.toUpperCase() || '?');
         setSwipeDirection(null);
         setDragX(0);
         setSwiping(false);
         setShowMatch(true);
-        return; // Don't advance card — celebration is showing
+        return;
       }
     } catch (err) {
       console.error('Swipe error:', err);
@@ -225,10 +227,6 @@ export default function DashboardPage() {
     else if (dragX < -100) handleSwipe('pass');
     else setDragX(0);
   };
-
-  const age = currentProfile?.profile.date_of_birth
-    ? new Date().getFullYear() - new Date(currentProfile.profile.date_of_birth).getFullYear()
-    : null;
 
   const cardRotation = dragX * 0.1;
   const cardOpacity = Math.max(0.5, 1 - Math.abs(dragX) / 400);
@@ -285,67 +283,12 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <div className="bg-surface-raised border border-[#2A2A3E] rounded-2xl overflow-hidden">
-              <div className="bg-gradient-to-br from-peach-400/20 to-spark-700/20 h-32 flex items-center justify-center relative">
-                <div className="absolute top-3 right-3 bg-peach-400/20 border border-peach-400/30 px-2.5 py-1 rounded-full">
-                  <span className="text-xs text-peach-400 font-medium flex items-center gap-1">
-                    <Heart className="w-3 h-3 fill-current" /> Liked you
-                  </span>
-                </div>
-                <div className="text-center">
-                  <p className="text-4xl font-serif font-bold text-spark-400">
-                    {currentProfile.profile.name?.charAt(0)?.toUpperCase()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-5">
-                <div className="mb-3">
-                  <h3 className="font-semibold text-xl">
-                    {currentProfile.profile.name}
-                    {age && <span className="text-neutral-400 font-normal">, {age}</span>}
-                  </h3>
-                  <p className="text-sm text-neutral-400">
-                    {[currentProfile.profile.program, currentProfile.profile.department]
-                      .filter(Boolean).join(' · ') || 'IIT Delhi'}
-                  </p>
-                </div>
-
-                {currentProfile.profile.bio && (
-                  <p className="text-sm text-neutral-300 mb-4">&quot;{currentProfile.profile.bio}&quot;</p>
-                )}
-
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {currentProfile.profile.relationship_goal && (
-                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
-                      {currentProfile.profile.relationship_goal}
-                    </span>
-                  )}
-                  {currentProfile.profile.diet && (
-                    <span className="text-xs bg-surface-raised text-neutral-300 px-2.5 py-1 rounded-full">
-                      {currentProfile.profile.diet}
-                    </span>
-                  )}
-                </div>
-
-                {currentProfile.shared_interests.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs text-neutral-400 mb-2">Shared interests</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentProfile.shared_interests.map((interest) => (
-                        <span key={interest} className="text-xs bg-spark-500/10 text-spark-400 px-2.5 py-1 rounded-full">
-                          {interest}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {currentProfile.shared_interests.length === 0 && (
-                  <p className="text-xs text-neutral-600 mb-4">No shared interests yet — opposites attract?</p>
-                )}
-              </div>
-            </div>
+            <ProfileCard
+              profile={currentProfile.profile}
+              compatibilityScore={currentProfile.compatibility}
+              compatibilityBreakdown={currentProfile.compatibilityBreakdown}
+              badge="liked-you"
+            />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center px-6 py-20 text-center">

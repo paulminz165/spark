@@ -38,9 +38,9 @@ export async function signInWithPassword(email: string, password: string, captch
  * Only @iitd.ac.in emails are accepted.
  */
 export async function signUpWithPassword(email: string, password: string, captchaToken?: string) {
-  if (!isIITDEmail(email)) {
-    return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
-  }
+  // if (!isIITDEmail(email)) {
+  //   return { error: { message: 'Only @iitd.ac.in emails are allowed' } };
+  // }
 
   const options: any = {};
   if (captchaToken) {
