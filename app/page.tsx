@@ -62,7 +62,7 @@ export default function LandingPage() {
         Compatibility over looks.
       </p>
       <p className="text-sm text-neutral-400 mb-12 max-w-xs">
-        5 matches a week, picked by who you actually are — not what you look like.
+     Picked by who you actually are — not what you look like   .
       </p>
 
       {/* CTA */}
@@ -79,7 +79,7 @@ export default function LandingPage() {
 
       {/* Social proof placeholder */}
       <div className="mt-16 text-neutral-600 text-xs">
-        <p>Built by students, for students</p>
+        <p>The connection is around the Campus</p>
       </div>
     </div>
   );
